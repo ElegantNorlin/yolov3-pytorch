@@ -4,6 +4,9 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
+'''
+darknet.py文件为darknet53特征提取网络
+'''
 
 #---------------------------------------------------------------------#
 #   残差结构
