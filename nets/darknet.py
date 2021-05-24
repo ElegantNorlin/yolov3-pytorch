@@ -129,7 +129,7 @@ class DarkNet(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
-        # 这里对最后三个单独拿出来命名，因为后面的网络需要用到这三个特征层
+        # 这里对最后三个特征层单独拿出来命名，因为后面的网络需要用到这三个特征层
         out3 = self.layer3(x)
         out4 = self.layer4(out3)
         out5 = self.layer5(out4)
