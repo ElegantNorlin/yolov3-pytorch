@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 '''
-darknet.py文件为用pytorch搭建的darknet53特征提取网络
+darknet.py文件为用pytorch搭建的darknet53特征提取网络（主干特征提取网络）
 '''
 
 #---------------------------------------------------------------------#
@@ -135,7 +135,7 @@ class DarkNet(nn.Module):
         out5 = self.layer5(out4)
 
         return out3, out4, out5
-
+# darknet53函数返回的是最后三个大残差块卷积后的特征尺度
 def darknet53(pretrained, **kwargs):
     # 使用DarkNet类生成DarkNet对象命名为model
     # 传入的列表对应了相应的残差块使用的次数
