@@ -62,7 +62,7 @@ class DarkNet(nn.Module):
         # 定义第一个卷积模块中的32通道
         self.inplanes = 32
         # 416,416,3 -> 416,416,32
-        # 卷积操作得到416,416,32
+        # 定义第一个卷积操作，卷积操作得到416,416,32
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
         # 标准化
         self.bn1 = nn.BatchNorm2d(self.inplanes)
@@ -86,6 +86,7 @@ class DarkNet(nn.Module):
         # 26,26,512 -> 13,13,1024
         self.layer5 = self._make_layer([512, 1024], layers[4])
 
+        # layers_out_filters是一个列表，里面存放每个大残差块输出的特征通道数
         self.layers_out_filters = [64, 128, 256, 512, 1024]
 
         # 进行权值初始化
@@ -107,14 +108,19 @@ class DarkNet(nn.Module):
     def _make_layer(self, planes, blocks):
         layers = []
         # 下采样(可以理解为图片的分辨率下降，成为“下采样”或“降采样”)，步长为2，卷积核大小为3
-        # 卷积层
+        # 作用：长和宽得到压缩，通道数得到扩张
+        # 这一层在架构图中是没有标注的
+        # self.inplanes = 32
+        # planes = [输入,输出]
         layers.append(("ds_conv", nn.Conv2d(self.inplanes, planes[1], kernel_size=3,
                                 stride=2, padding=1, bias=False)))
         # 定义标准化层
         layers.append(("ds_bn", nn.BatchNorm2d(planes[1])))
         # 定义LeakyReLU激活函数
         layers.append(("ds_relu", nn.LeakyReLU(0.1)))
+        # 现在是planes[1]通道的特征
         # 加入残差结构
+        # planes[1]为卷积层输出特征维度
         self.inplanes = planes[1]
         # blocks是定义了该残差块的使用(堆叠)的次数,也就是我们传入的那个列表中的数值。
         for i in range(0, blocks):

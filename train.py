@@ -12,7 +12,20 @@ from nets.yolo3 import YoloBody
 from nets.yolo_training import YOLOLoss, LossHistory, weights_init
 from utils.dataloader import YoloDataset, yolo_dataset_collate
 
+# 返回一个三维数组:
+'''
+[[[116.  90.]
+  [156. 198.]
+  [373. 326.]]
 
+ [[ 30.  61.]
+  [ 62.  45.]
+  [ 59. 119.]]
+
+ [[ 10.  13.]
+  [ 16.  30.]
+  [ 33.  23.]]]
+'''
 def get_anchors(anchors_path):
     with open(anchors_path) as f:
         anchors = f.readline()
@@ -145,6 +158,20 @@ if __name__ == "__main__":
     #   先验框anchor的路径
     #----------------------------------------------------#
     anchors_path = 'model_data/yolo_anchors.txt'
+    # anchors为三维数组
+    '''
+    [[[116.  90.]
+      [156. 198.]
+      [373. 326.]]
+
+     [[ 30.  61.]
+      [ 62.  45.]
+      [ 59. 119.]]
+
+     [[ 10.  13.]
+      [ 16.  30.]
+      [ 33.  23.]]]
+    '''
     anchors      = get_anchors(anchors_path)
     #------------------------------------------------------#
     #   创建yolo模型
