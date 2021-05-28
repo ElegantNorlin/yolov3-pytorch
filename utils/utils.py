@@ -8,6 +8,7 @@ from torchvision.ops import nms
 
 
 class DecodeBox(nn.Module):
+    # anchors一个二维数组
     def __init__(self, anchors, num_classes, img_size):
         super(DecodeBox, self).__init__()
         #-----------------------------------------------------------#
@@ -34,6 +35,9 @@ class DecodeBox(nn.Module):
 
         #-----------------------------------------------#
         #   输入为416x416时
+        #   416 / 13 = 32
+        #   每一个特征点对应原图上多少个像素点
+        #   如果特征层为13x13，一个特征点对应原图32个像素点
         #   stride_h = stride_w = 32、16、8
         #-----------------------------------------------#
         stride_h = self.img_size[1] / input_height

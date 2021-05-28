@@ -163,7 +163,7 @@ class YoloBody(nn.Module):
         # 26,26,256 -> 26,26,128 -> 52,52,128
         x2_in = self.last_layer2_conv(out1_branch)
         x2_in = self.last_layer2_upsample(x2_in)
-
+        
         # 特征层合并
         # 52,52,128 + 52,52,256 -> 52,52,384
         x2_in = torch.cat([x2_in, x2], 1)

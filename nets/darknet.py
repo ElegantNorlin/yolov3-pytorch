@@ -59,7 +59,7 @@ class DarkNet(nn.Module):
     # 参数layers为列表，列表的每一个参数为残差块的堆叠次数
     def __init__(self, layers):
         super(DarkNet, self).__init__()
-        # 定义第一个卷积模块中的32通道
+        # 定义第一个卷积模块中的输出特征为32通道,也就是下一层的32通道的输入特征
         self.inplanes = 32
         # 416,416,3 -> 416,416,32
         # 定义第一个卷积操作，卷积操作得到416,416,32
