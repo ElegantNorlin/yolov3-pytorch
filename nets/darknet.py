@@ -110,7 +110,7 @@ class DarkNet(nn.Module):
         # 下采样(可以理解为图片的分辨率下降，成为“下采样”或“降采样”)，步长为2，卷积核大小为3
         # 作用：长和宽得到压缩，通道数得到扩张
         # 这一层在架构图中是没有标注的
-        # self.inplanes = 32
+        # 第一次的self.inplanes = 32
         # planes = [输入,输出]
         layers.append(("ds_conv", nn.Conv2d(self.inplanes, planes[1], kernel_size=3,
                                 stride=2, padding=1, bias=False)))
