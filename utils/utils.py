@@ -24,6 +24,7 @@ class DecodeBox(nn.Module):
 
     def forward(self, input):
         #-----------------------------------------------#
+        # input为(batchsize,3*(1+4+num_classes),13,13)
         #   输入的input一共有三个，他们的shape分别是
         #   batch_size, 255, 13, 13
         #   batch_size, 255, 26, 26
