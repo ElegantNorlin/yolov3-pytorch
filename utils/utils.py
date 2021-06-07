@@ -25,19 +25,27 @@ class DecodeBox(nn.Module):
     def forward(self, input):
         #-----------------------------------------------#
         # input为(batchsize,3*(1+4+num_classes),13,13)
+        # 3代表3个先验框
+        # 1代表先验框内部是否包含物体
+        # 4代表先验框的4个参数，解码过程主要利用到先验框的4个参数
+        # num_classes代表先验框内部物体的种类
         #   输入的input一共有三个，他们的shape分别是
         #   batch_size, 255, 13, 13
         #   batch_size, 255, 26, 26
         #   batch_size, 255, 52, 52
         #-----------------------------------------------#
+        # 先判断一共多少张图片
         batch_size = input.size(0)
+        # 取出特征层的高和宽这里以13x13为例子
         input_height = input.size(2)
         input_width = input.size(3)
 
         #-----------------------------------------------#
+        # 计算步长
+        # 每一个特征点对应原来的图片上多少个像素点
+        # 仍然以13x13为例
         #   输入为416x416时
         #   416 / 13 = 32
-        #   每一个特征点对应原图上多少个像素点
         #   如果特征层为13x13，一个特征点对应原图32个像素点
         #   stride_h = stride_w = 32、16、8
         #-----------------------------------------------#
@@ -45,6 +53,8 @@ class DecodeBox(nn.Module):
         stride_w = self.img_size[0] / input_width
         #-------------------------------------------------#
         #   此时获得的scaled_anchors大小是相对于特征层的
+        # yolo_anchors.txt = 10,13,  16,30,  33,23,  30,61,  62,45,  59,119,  116,90,  156,198,  373,326
+        # 这个anchors尺寸是相对于416x416图片定义的先验框大小，要先把先验框尺寸调整到对应的特征层
         #-------------------------------------------------#
         scaled_anchors = [(anchor_width / stride_w, anchor_height / stride_h) for anchor_width, anchor_height in self.anchors]
 
@@ -53,7 +63,9 @@ class DecodeBox(nn.Module):
         #   batch_size, 3, 13, 13, 85
         #   batch_size, 3, 26, 26, 85
         #   batch_size, 3, 52, 52, 85
-        #-----------------------------------------------#
+        # bs,3*(1+4+num-classes),13,13 -> bs,3,13,13,(1+4+num_classes)
+        # self.bbox_attrs为先验框的内容5+num_classes = 1+4+num_classes
+         #-----------------------------------------------#
         prediction = input.view(batch_size, self.num_anchors,
                                 self.bbox_attrs, input_height, input_width).permute(0, 1, 3, 4, 2).contiguous()
 
@@ -72,7 +84,7 @@ class DecodeBox(nn.Module):
         LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
 
         #----------------------------------------------------------#
-        #   生成网格，先验框中心，网格左上角 
+        #   生成网格，先验框中心，网格左上角 也就是网格点，每个网格的左上角点
         #   batch_size,3,13,13
         #----------------------------------------------------------#
         grid_x = torch.linspace(0, input_width - 1, input_width).repeat(input_height, 1).repeat(
@@ -90,13 +102,17 @@ class DecodeBox(nn.Module):
         anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, input_height * input_width).view(h.shape)
 
         #----------------------------------------------------------#
+        #   计算调整后的先验框的中心与宽高
         #   利用预测结果对先验框进行调整
         #   首先调整先验框的中心，从先验框中心向右下角偏移
         #   再调整先验框的宽高。
         #----------------------------------------------------------#
         pred_boxes = FloatTensor(prediction[..., :4].shape)
+        # 先验框的中心：
+        # x.data和y.data为先验框中心的调整参数(数值在0-1之间),grid_x和grid_y为网格点左上角的坐标
         pred_boxes[..., 0] = x.data + grid_x
         pred_boxes[..., 1] = y.data + grid_y
+        # 先对先验框宽高调整参数取指数，再乘以先验框的宽高就是调整之后的先验框
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
@@ -171,9 +187,10 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
     return iou
 
-
+# 非极大抑制 筛选出一个目标所有预测框中得分最高的框
 def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     #----------------------------------------------------------#
+    #   之前我们使用中心点和宽高来表示预测框，我们现在要转换成左上角和右下角形式
     #   将预测结果的格式转换成左上角右下角的格式。
     #   prediction  [batch_size, num_anchors, 85]
     #----------------------------------------------------------#
@@ -185,16 +202,20 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     prediction[:, :, :4] = box_corner[:, :, :4]
 
     output = [None for _ in range(len(prediction))]
+    # 对所有要预测的图片进行循环
     for image_i, image_pred in enumerate(prediction):
         #----------------------------------------------------------#
         #   对种类预测部分取max。
         #   class_conf  [num_anchors, 1]    种类置信度
         #   class_pred  [num_anchors, 1]    种类
         #----------------------------------------------------------#
+        # 获得种类及其置信度
+        # 获得的置信度保留在class_conf中
+        # 获得的种类保留在class_pred中
         class_conf, class_pred = torch.max(image_pred[:, 5:5 + num_classes], 1, keepdim=True)
 
         #----------------------------------------------------------#
-        #   利用置信度进行第一轮筛选
+        #   利用置信度进行第一轮筛选，把满足置信度条件的框留下
         #----------------------------------------------------------#
         conf_mask = (image_pred[:, 4] * class_conf[:, 0] >= conf_thres).squeeze()
 
@@ -220,16 +241,12 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         if prediction.is_cuda:
             unique_labels = unique_labels.cuda()
             detections = detections.cuda()
-
+        # 对种类进行遍历
         for c in unique_labels:
-            #------------------------------------------#
             #   获得某一类得分筛选后全部的预测结果
-            #------------------------------------------#
+            # 首先筛选出来属于某个类的框，保存在detections_class中，之后对detections_class中的置信度进行排序
             detections_class = detections[detections[:, -1] == c]
-
-            #------------------------------------------#
             #   使用官方自带的非极大抑制会速度更快一些！
-            #------------------------------------------#
             keep = nms(
                 detections_class[:, :4],
                 detections_class[:, 4] * detections_class[:, 5],

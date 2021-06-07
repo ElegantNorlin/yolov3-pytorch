@@ -125,16 +125,22 @@ class YOLO(object):
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize
         #   也可以直接resize进行识别
+        '''
+        如果输入进来的图片不是正方形的，而yolo需要输入416x416的图片,我们会先对图片进行resize操作，
+        这样图片就会失真，letterbox_image就是在图片周围添加灰条，让图片变成正方形然后在resize
+        这样就防止图片发生失真了
+        '''
         #---------------------------------------------------------#
         if self.letterbox_image:
             crop_img = np.array(letterbox_image(image, (self.model_image_size[1], self.model_image_size[0])))
         else:
             crop_img = image.resize((self.model_image_size[1], self.model_image_size[0]), Image.BICUBIC)
-
+        # 归一化操作
         photo = np.array(crop_img,dtype = np.float32) / 255.0
+        # 调整通道维度
         photo = np.transpose(photo, (2, 0, 1))
         #---------------------------------------------------------#
-        #   添加上batch_size维度
+        #   扩充维度，添加上batch_size维度
         #---------------------------------------------------------#
         images = [photo]
 
@@ -148,11 +154,12 @@ class YOLO(object):
             #---------------------------------------------------------#
             outputs = self.net(images)
             output_list = []
+            # 获取三个特征层解码后的预测框
             for i in range(3):
                 output_list.append(self.yolo_decodes[i](outputs[i]))
                 
             #---------------------------------------------------------#
-            #   将预测框进行堆叠，然后进行非极大抑制
+            #   将三个特征曾获得的预测框进行堆叠，然后进行非极大抑制
             #---------------------------------------------------------#
             output = torch.cat(output_list, 1)
             batch_detections = non_max_suppression(output, self.num_classes, conf_thres=self.confidence, nms_thres=self.iou)
@@ -175,6 +182,7 @@ class YOLO(object):
             top_xmin, top_ymin, top_xmax, top_ymax = np.expand_dims(top_bboxes[:,0],-1),np.expand_dims(top_bboxes[:,1],-1),np.expand_dims(top_bboxes[:,2],-1),np.expand_dims(top_bboxes[:,3],-1)
 
             #-----------------------------------------------------------------#
+            #   去掉灰条
             #   在图像传入网络预测前会进行letterbox_image给图像周围添加灰条
             #   因此生成的top_bboxes是相对于有灰条的图像的
             #   我们需要对其进行修改，去除灰条的部分。
@@ -187,9 +195,9 @@ class YOLO(object):
                 top_xmax = top_xmax / self.model_image_size[1] * image_shape[1]
                 top_ymax = top_ymax / self.model_image_size[0] * image_shape[0]
                 boxes = np.concatenate([top_ymin,top_xmin,top_ymax,top_xmax], axis=-1)
-                
+        # 定义字体 
         font = ImageFont.truetype(font='model_data/simhei.ttf',size=np.floor(3e-2 * np.shape(image)[1] + 0.5).astype('int32'))
-
+        
         thickness = max((np.shape(image)[0] + np.shape(image)[1]) // self.model_image_size[0], 1)
 
         for i, c in enumerate(top_label):
@@ -254,6 +262,7 @@ class YOLO(object):
                 images = images.cuda()
             outputs = self.net(images)
             output_list = []
+            # 经过三次循环完成三个特征层的解码
             for i in range(3):
                 output_list.append(self.yolo_decodes[i](outputs[i]))
             output = torch.cat(output_list, 1)
