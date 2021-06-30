@@ -40,6 +40,10 @@ yolo3.py      ---->  输出了特征金字塔回归、预测三个阶段最后�
 
 * voc_annotation.py生成2007_train.txt,2007_test.txt生成训练、测试时的一些信息
 
+* get_dr_txt.py ----> 生成test测试集预测框信息txt文件
+
+* get_gt_txt.py ----> 生成test测试集真实框信息txt文件
+
 ## 文件下载
 训练所需的yolo_weights.pth可以在百度云下载。  
 链接: https://pan.baidu.com/s/1ncREw6Na9ycZptdxiVMApw   
